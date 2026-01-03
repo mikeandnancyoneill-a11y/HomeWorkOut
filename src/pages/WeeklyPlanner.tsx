@@ -13,7 +13,15 @@ export type PlanItem = {
   target_sets: number;
   target_reps: number;
   target_weight: number | null;
-  exercises?: { name: string };
+ superset_group: number | null;
+superset_order: number | null;
+notes?: string | null;
+completed: boolean;
+actual_sets: number | null;
+actual_reps: number | null;
+actual_weight: number | null;
+locked_at: string | null;
+ exercises?: { name: string };
 };
 
 type DayMeta = {
@@ -61,7 +69,8 @@ export default function WeeklyPlanner() {
     // 1) weekly_plan
     const { data: plan, error: planErr } = await supabase
       .from('weekly_plan')
-      .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,exercises(name)')
+      .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,superset_group,superset_order,notes,completed,actual_sets,actual_reps,actual_weight,locked_at,exercises(name)')
+
       .eq('user_id', userId)
       .eq('week_start', weekStartStr)
       .order('day_of_week', { ascending: true })
