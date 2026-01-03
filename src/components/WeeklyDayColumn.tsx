@@ -5,30 +5,29 @@ import type { PlanItem } from '../pages/WeeklyPlanner';
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const COLORS = {
-  supersetBg: '#d9f7d9',      // green
-  supersetBorder: '#2e7d32',  // darker green border
-  regularBg: '#eefbea',       // light green
+  supersetBg: '#d9f7d9',
+  supersetBorder: '#2e7d32',
+  regularBg: '#eefbea',
   regularBorder: '#cfe8cf',
-  optionalBg: '#eeeeee',      // gray
+  optionalBg: '#eeeeee',
   optionalBorder: '#bdbdbd',
 };
-
-function sortKey(a: PlanItem) {
-  const g = a.superset_group ?? 9999;
-  const o = a.superset_order ?? 9999;
-  // Optional items should sort after non-optional items
-  const opt = a.is_optional ? 1 : 0;
-  return g * 100000 + o * 10 + opt;
-}
 
 function youtubeSearchUrl(query: string) {
   const q = encodeURIComponent(`${query} proper form tutorial`);
   return `https://www.youtube.com/results?search_query=${q}`;
 }
 
+function sortKey(a: PlanItem) {
+  const g = a.superset_group ?? 9999;
+  const o = a.superset_order ?? 9999;
+  const opt = a.is_optional ? 1 : 0; // optional later
+  return g * 100000 + o * 10 + opt;
+}
+
 export default function WeeklyDayColumn({
   dayOfWeek,
-  weekStart, // unused here but kept consistent with parent props
+  weekStart, // kept for consistency, not used here
   dayTitle,
   dayNotes,
   items,
@@ -67,7 +66,6 @@ export default function WeeklyDayColumn({
         });
       });
 
-    // Put singles after supersets; optional singles naturally appear last due to sortKey
     singles.forEach((r) => groups.push({ key: `single-${r.id}`, supersetGroup: null, rows: [r] }));
 
     return groups;
@@ -85,7 +83,6 @@ export default function WeeklyDayColumn({
       completed: row.completed,
     };
 
-    // planned edits only if not locked (DB trigger also enforces)
     if (!row.locked_at) {
       payload.target_sets = row.target_sets;
       payload.target_reps = row.target_reps;
@@ -215,7 +212,9 @@ export default function WeeklyDayColumn({
                         type="number"
                         value={row.actual_sets ?? ''}
                         disabled={locked}
-                        onChange={(e) => updateField(row.id, { actual_sets: e.target.value === '' ? null : Number(e.target.value) })}
+                        onChange={(e) =>
+                          updateField(row.id, { actual_sets: e.target.value === '' ? null : Number(e.target.value) })
+                        }
                         onBlur={() => saveRow(local.find((x) => x.id === row.id) ?? row)}
                         style={{ width: '100%' }}
                       />
@@ -228,7 +227,9 @@ export default function WeeklyDayColumn({
                           type="number"
                           value={row.actual_reps ?? ''}
                           disabled={locked}
-                          onChange={(e) => updateField(row.id, { actual_reps: e.target.value === '' ? null : Number(e.target.value) })}
+                          onChange={(e) =>
+                            updateField(row.id, { actual_reps: e.target.value === '' ? null : Number(e.target.value) })
+                          }
                           onBlur={() => saveRow(local.find((x) => x.id === row.id) ?? row)}
                           style={{ width: '100%' }}
                         />
@@ -240,7 +241,9 @@ export default function WeeklyDayColumn({
                           type="number"
                           value={row.actual_weight ?? ''}
                           disabled={locked}
-                          onChange={(e) => updateField(row.id, { actual_weight: e.target.value === '' ? null : Number(e.target.value) })}
+                          onChange={(e) =>
+                            updateField(row.id, { actual_weight: e.target.value === '' ? null : Number(e.target.value) })
+                          }
                           onBlur={() => saveRow(local.find((x) => x.id === row.id) ?? row)}
                           style={{ width: '100%' }}
                         />

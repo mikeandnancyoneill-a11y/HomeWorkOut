@@ -8,7 +8,7 @@ export type PlanItem = {
   id: string;
   user_id: string;
   week_start: string;
-  day_of_week: number;
+  day_of_week: number; // 0..6 (Mon..Sun)
   exercise_id: number;
 
   target_sets: number;
@@ -80,11 +80,14 @@ export default function WeeklyPlanner() {
     // 1) weekly_plan
     const { data: plan, error: planErr } = await supabase
       .from('weekly_plan')
-     .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,superset_group,superset_order,notes,completed,actual_sets,actual_reps,actual_weight,locked_at,is_optional,exercises(name,video_url,coaching_tips)')
-
+      .select(
+        'id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,superset_group,superset_order,notes,completed,actual_sets,actual_reps,actual_weight,locked_at,is_optional,exercises(name,video_url,coaching_tips)'
+      )
       .eq('user_id', userId)
       .eq('week_start', weekStartStr)
       .order('day_of_week', { ascending: true })
+      .order('superset_group', { ascending: true })
+      .order('superset_order', { ascending: true })
       .order('exercise_id', { ascending: true });
 
     if (planErr) {
@@ -138,29 +141,29 @@ export default function WeeklyPlanner() {
 
       <WeeklyNav onWeekChange={handleWeekChange} currentWeekStart={currentWeekStart} />
 
-     <div style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
-  <div
-    style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(7, minmax(360px, 1fr))',
-      gap: '0.75rem',
-      minWidth: '2520px', // 7 * 360
-      alignItems: 'start',
-    }}
-  >
-    {Array.from({ length: 7 }).map((_, day) => (
-      <WeeklyDayColumn
-        key={day}
-        dayOfWeek={day}
-        weekStart={weekStartStr}
-        dayTitle={metaByDay[day]?.day_title ?? ''}
-        dayNotes={metaByDay[day]?.day_notes ?? null}
-        items={itemsByDay[day] ?? []}
-        onSaved={refetch}
-      />
-    ))}
-  </div>
-</div>
-
+      <div style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, minmax(360px, 1fr))',
+            gap: '0.75rem',
+            minWidth: '2520px', // 7 * 360
+            alignItems: 'start',
+          }}
+        >
+          {Array.from({ length: 7 }).map((_, day) => (
+            <WeeklyDayColumn
+              key={day}
+              dayOfWeek={day}
+              weekStart={weekStartStr}
+              dayTitle={metaByDay[day]?.day_title ?? ''}
+              dayNotes={metaByDay[day]?.day_notes ?? null}
+              items={itemsByDay[day] ?? []}
+              onSaved={refetch}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
