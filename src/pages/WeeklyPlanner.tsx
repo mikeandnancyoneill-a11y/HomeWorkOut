@@ -1,90 +1,95 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import WeeklyDayColumn from '../components/WeeklyDayColumn';
 import WeeklyNav from '../components/WeeklyNav';
 import { startOfWeek, addWeeks, format } from 'date-fns';
 
-interface ExerciseLog {
-  id?: number;
-  workout_date: string;
-  exercise_name: string;
-  set_number: number;
-  reps: number;
-  weight_lb: number;
-  rpe?: number;
-  pain?: boolean;
+export type PlanItem = {
+  id: string;
+  user_id: string;
+  week_start: string;       // YYYY-MM-DD
+  day_of_week: number;      // 0..6 (Mon..Sun)
   exercise_id: number;
-}
+  target_sets: number;
+  target_reps: number;
+  target_weight: number | null;
+  exercises?: { name: string };
+};
 
 export default function WeeklyPlanner() {
-  const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [weeklyData, setWeeklyData] = useState<Record<string, ExerciseLog[]>>({});
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Monday-based week start
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+
+  const weekStartStr = useMemo(
+    () => format(currentWeekStart, 'yyyy-MM-dd'),
+    [currentWeekStart]
+  );
+
+  const [itemsByDay, setItemsByDay] = useState<Record<number, PlanItem[]>>({
+    0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
+  });
+
   useEffect(() => {
-    const getUser = async () => {
+    (async () => {
       const { data } = await supabase.auth.getUser();
-      setUserId(data?.user?.id || null);
-    };
-    getUser();
+      setUserId(data?.user?.id ?? null);
+    })();
   }, []);
 
   useEffect(() => {
     if (!userId) return;
-    const fetchWeekly = async () => {
-      const start = format(currentWeekStart, 'yyyy-MM-dd');
-      const end = format(addWeeks(currentWeekStart, 1), 'yyyy-MM-dd');
+
+    (async () => {
       const { data, error } = await supabase
-        .from('workout_logs')
-        .select(`*, exercises(name)`)
-        .gte('workout_date', start)
-        .lt('workout_date', end)
+        .from('weekly_plan')
+        .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,exercises(name)')
         .eq('user_id', userId)
-        .order('workout_date', { ascending: true });
+        .eq('week_start', weekStartStr)
+        .order('day_of_week', { ascending: true })
+        .order('exercise_id', { ascending: true });
 
       if (error) {
-        console.error(error);
+        console.error('weekly_plan fetch error:', error);
         return;
       }
 
-      const grouped: Record<string, ExerciseLog[]> = {};
-      data?.forEach((log: any) => {
-        const day = log.workout_date;
-        if (!grouped[day]) grouped[day] = [];
-        grouped[day].push({
-          ...log,
-          exercise_name: log.exercises.name,
-        });
+      const grouped: Record<number, PlanItem[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+      (data ?? []).forEach((row: any) => {
+        grouped[row.day_of_week] = grouped[row.day_of_week] || [];
+        grouped[row.day_of_week].push(row);
       });
-      setWeeklyData(grouped);
-    };
 
-    fetchWeekly();
-  }, [currentWeekStart, userId]);
+      setItemsByDay(grouped);
+    })();
+  }, [userId, weekStartStr]);
 
-  const handleWeekChange = (weeks: number) => {
-    setCurrentWeekStart(addWeeks(currentWeekStart, weeks));
+  const handleWeekChange = (deltaWeeks: number) => {
+    setCurrentWeekStart(addWeeks(currentWeekStart, deltaWeeks));
   };
 
   return (
     <div style={{ padding: '1rem' }}>
-      <h1>HomeWorkout Weekly Planner</h1>
+      <h1>HomeWorkOut Weekly Plan</h1>
+
       <WeeklyNav onWeekChange={handleWeekChange} currentWeekStart={currentWeekStart} />
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-        {Array.from({ length: 7 }).map((_, i) => {
-          const dayDate = new Date(currentWeekStart);
-          dayDate.setDate(currentWeekStart.getDate() + i);
-          const dayStr = format(dayDate, 'yyyy-MM-dd');
-          return (
-            <WeeklyDayColumn
-              key={dayStr}
-              date={dayDate}
-              exercises={weeklyData[dayStr] || []}
-              userId={userId}
-              refreshWeek={() => setCurrentWeekStart(new Date(currentWeekStart))}
-            />
-          );
-        })}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(180px, 1fr))', gap: '0.75rem' }}>
+        {Array.from({ length: 7 }).map((_, day) => (
+          <WeeklyDayColumn
+            key={day}
+            dayOfWeek={day}
+            weekStart={weekStartStr}
+            items={itemsByDay[day] ?? []}
+            onSaved={() => {
+              // Re-fetch by forcing state update
+              setCurrentWeekStart(new Date(currentWeekStart));
+            }}
+          />
+        ))}
       </div>
     </div>
   );
