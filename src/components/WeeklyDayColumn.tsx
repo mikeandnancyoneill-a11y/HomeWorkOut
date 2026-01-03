@@ -7,11 +7,15 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export default function WeeklyDayColumn({
   dayOfWeek,
   weekStart,
+  dayTitle,
+  dayNotes,
   items,
   onSaved,
 }: {
   dayOfWeek: number;
   weekStart: string;
+  dayTitle: string;
+  dayNotes: string | null;
   items: PlanItem[];
   onSaved: () => void;
 }) {
@@ -44,9 +48,19 @@ export default function WeeklyDayColumn({
 
   return (
     <div style={{ background: '#fff', padding: '0.75rem', borderRadius: 8, border: '1px solid #ddd' }}>
-      <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
+      <div style={{ fontWeight: 800, marginBottom: 6 }}>
         {DAY_LABELS[dayOfWeek]}
       </div>
+
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>
+        {dayTitle}
+      </div>
+
+      {dayNotes && (
+        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8 }}>
+          {dayNotes}
+        </div>
+      )}
 
       {local.length === 0 && (
         <div style={{ fontSize: 12, opacity: 0.7 }}>
@@ -65,6 +79,7 @@ export default function WeeklyDayColumn({
                 type="number"
                 value={row.target_sets}
                 onChange={(e) => updateField(idx, 'target_sets', Number(e.target.value))}
+                onBlur={() => saveRow(local[idx])}
                 style={{ width: '100%' }}
               />
             </label>
@@ -75,6 +90,7 @@ export default function WeeklyDayColumn({
                 type="number"
                 value={row.target_reps}
                 onChange={(e) => updateField(idx, 'target_reps', Number(e.target.value))}
+                onBlur={() => saveRow(local[idx])}
                 style={{ width: '100%' }}
               />
             </label>
@@ -85,17 +101,11 @@ export default function WeeklyDayColumn({
                 type="number"
                 value={row.target_weight ?? ''}
                 onChange={(e) => updateField(idx, 'target_weight', e.target.value === '' ? null : Number(e.target.value))}
+                onBlur={() => saveRow(local[idx])}
                 style={{ width: '100%' }}
               />
             </label>
           </div>
-
-          <button
-            onClick={() => saveRow(row)}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            Save
-          </button>
         </div>
       ))}
     </div>

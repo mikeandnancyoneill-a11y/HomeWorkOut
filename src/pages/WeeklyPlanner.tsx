@@ -7,8 +7,8 @@ import { startOfWeek, addWeeks, format } from 'date-fns';
 export type PlanItem = {
   id: string;
   user_id: string;
-  week_start: string;       // YYYY-MM-DD
-  day_of_week: number;      // 0..6 (Mon..Sun)
+  week_start: string;
+  day_of_week: number; // 0..6 (Mon..Sun)
   exercise_id: number;
   target_sets: number;
   target_reps: number;
@@ -16,10 +16,15 @@ export type PlanItem = {
   exercises?: { name: string };
 };
 
+type DayMeta = {
+  day_of_week: number;
+  day_title: string;
+  day_notes?: string | null;
+};
+
 export default function WeeklyPlanner() {
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Monday-based week start
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
@@ -30,7 +35,17 @@ export default function WeeklyPlanner() {
   );
 
   const [itemsByDay, setItemsByDay] = useState<Record<number, PlanItem[]>>({
-    0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
+    0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [],
+  });
+
+  const [metaByDay, setMetaByDay] = useState<Record<number, DayMeta>>({
+    0: { day_of_week: 0, day_title: 'PUSH' },
+    1: { day_of_week: 1, day_title: 'PULL' },
+    2: { day_of_week: 2, day_title: 'LEGS' },
+    3: { day_of_week: 3, day_title: 'UPPER' },
+    4: { day_of_week: 4, day_title: 'FULL BODY' },
+    5: { day_of_week: 5, day_title: 'RUN + MOBILITY' },
+    6: { day_of_week: 6, day_title: 'RECOVERY' },
   });
 
   useEffect(() => {
@@ -40,31 +55,57 @@ export default function WeeklyPlanner() {
     })();
   }, []);
 
-  useEffect(() => {
+  const refetch = async () => {
     if (!userId) return;
 
-    (async () => {
-      const { data, error } = await supabase
-        .from('weekly_plan')
-        .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,exercises(name)')
-        .eq('user_id', userId)
-        .eq('week_start', weekStartStr)
-        .order('day_of_week', { ascending: true })
-        .order('exercise_id', { ascending: true });
+    // 1) weekly_plan
+    const { data: plan, error: planErr } = await supabase
+      .from('weekly_plan')
+      .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,exercises(name)')
+      .eq('user_id', userId)
+      .eq('week_start', weekStartStr)
+      .order('day_of_week', { ascending: true })
+      .order('exercise_id', { ascending: true });
 
-      if (error) {
-        console.error('weekly_plan fetch error:', error);
-        return;
-      }
+    if (planErr) {
+      console.error('weekly_plan fetch error:', planErr);
+      return;
+    }
 
-      const grouped: Record<number, PlanItem[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-      (data ?? []).forEach((row: any) => {
-        grouped[row.day_of_week] = grouped[row.day_of_week] || [];
-        grouped[row.day_of_week].push(row);
-      });
+    const grouped: Record<number, PlanItem[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    (plan ?? []).forEach((row: any) => {
+      grouped[row.day_of_week] = grouped[row.day_of_week] || [];
+      grouped[row.day_of_week].push(row);
+    });
+    setItemsByDay(grouped);
 
-      setItemsByDay(grouped);
-    })();
+    // 2) weekly_day_meta
+    const { data: meta, error: metaErr } = await supabase
+      .from('weekly_day_meta')
+      .select('day_of_week, day_title, day_notes')
+      .eq('user_id', userId)
+      .eq('week_start', weekStartStr);
+
+    if (metaErr) {
+      console.error('weekly_day_meta fetch error:', metaErr);
+      return;
+    }
+
+    const nextMeta: Record<number, DayMeta> = { ...metaByDay };
+    (meta ?? []).forEach((m: any) => {
+      nextMeta[m.day_of_week] = {
+        day_of_week: m.day_of_week,
+        day_title: m.day_title,
+        day_notes: m.day_notes,
+      };
+    });
+    setMetaByDay(nextMeta);
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+    refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, weekStartStr]);
 
   const handleWeekChange = (deltaWeeks: number) => {
@@ -83,11 +124,10 @@ export default function WeeklyPlanner() {
             key={day}
             dayOfWeek={day}
             weekStart={weekStartStr}
+            dayTitle={metaByDay[day]?.day_title ?? ''}
+            dayNotes={metaByDay[day]?.day_notes ?? null}
             items={itemsByDay[day] ?? []}
-            onSaved={() => {
-              // Re-fetch by forcing state update
-              setCurrentWeekStart(new Date(currentWeekStart));
-            }}
+            onSaved={refetch}
           />
         ))}
       </div>
