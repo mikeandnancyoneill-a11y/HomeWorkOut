@@ -20,6 +20,7 @@ completed: boolean;
 actual_sets: number | null;
 actual_reps: number | null;
 actual_weight: number | null;
+is_optional: boolean;
 locked_at: string | null;
  exercises?: { name: string };
 };
@@ -69,7 +70,8 @@ export default function WeeklyPlanner() {
     // 1) weekly_plan
     const { data: plan, error: planErr } = await supabase
       .from('weekly_plan')
-      .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,superset_group,superset_order,notes,completed,actual_sets,actual_reps,actual_weight,locked_at,exercises(name)')
+     .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,superset_group,superset_order,notes,completed,actual_sets,actual_reps,actual_weight,locked_at,is_optional,exercises(name)')
+
 
       .eq('user_id', userId)
       .eq('week_start', weekStartStr)

@@ -41,6 +41,15 @@ export default function WeeklyDayColumn({
       else map.set(r.superset_group, [...(map.get(r.superset_group) ?? []), r]);
     });
 
+const COLORS = {
+  supersetBg: '#d9f7d9',      // green
+  supersetBorder: '#2e7d32',  // darker green border
+  regularBg: '#eefbea',       // light green
+  optionalBg: '#eeeeee',      // gray
+  optionalBorder: '#bdbdbd',
+};
+
+
     // superset groups in numeric order
     [...map.entries()]
       .sort((a, b) => a[0] - b[0])
@@ -109,11 +118,11 @@ export default function WeeklyDayColumn({
           <div
             key={g.key}
             style={{
-              border: isSuperset ? '2px solid #bbb' : '1px solid #eee',
+              border: isSuperset ? `2px solid ${COLORS.supersetBorder}` : '1px solid #eee',
               borderRadius: 10,
               padding: '0.5rem',
               marginTop: '0.6rem',
-              background: isSuperset ? '#fafafa' : '#fff',
+              background: isSuperset ? COLORS.supersetBg : '#fff',           
             }}
           >
             {isSuperset && (
@@ -123,11 +132,32 @@ export default function WeeklyDayColumn({
             )}
 
             {g.rows.map((row) => {
+              const rowBg = row.is_optional ? COLORS.optionalBg : COLORS.regularBg;
+              const rowBorder = row.is_optional ? COLORS.optionalBorder : '#cfe8cf';
+
               const locked = !!row.locked_at;
               const name = row.exercises?.name ?? `Exercise ${row.exercise_id}`;
 
               return (
-                <div key={row.id} style={{ paddingTop: 6, borderTop: isSuperset ? '1px dashed #ddd' : '1px solid #eee' }}>
+                
+<div
+  key={row.id}
+  style={{
+    padding: '8px',
+    marginTop: '8px',
+    borderRadius: 8,
+    background: rowBg,
+    border: `1px solid ${rowBorder}`,
+    opacity: row.completed ? 0.9 : 1,
+  }}
+>
+
+{row.is_optional && (
+  <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.8, marginTop: 2 }}>
+    OPTIONAL
+  </div>
+)}
+
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                     <div style={{ fontWeight: 650 }}>{name}</div>
                     <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
