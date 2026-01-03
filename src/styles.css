@@ -1,0 +1,12 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  padding: 1rem;
+  background: #f6f6f6;
+}
+.card {
+  background: white;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+}
