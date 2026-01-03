@@ -8,21 +8,31 @@ export type PlanItem = {
   id: string;
   user_id: string;
   week_start: string;
-  day_of_week: number; // 0..6 (Mon..Sun)
+  day_of_week: number;
   exercise_id: number;
+
   target_sets: number;
   target_reps: number;
   target_weight: number | null;
- superset_group: number | null;
-superset_order: number | null;
-notes?: string | null;
-completed: boolean;
-actual_sets: number | null;
-actual_reps: number | null;
-actual_weight: number | null;
-is_optional: boolean;
-locked_at: string | null;
- exercises?: { name: string };
+
+  superset_group: number | null;
+  superset_order: number | null;
+
+  notes?: string | null;
+
+  completed: boolean;
+  actual_sets: number | null;
+  actual_reps: number | null;
+  actual_weight: number | null;
+  locked_at: string | null;
+
+  is_optional: boolean;
+
+  exercises?: {
+    name: string;
+    video_url?: string | null;
+    coaching_tips?: string | null;
+  };
 };
 
 type DayMeta = {
@@ -70,8 +80,7 @@ export default function WeeklyPlanner() {
     // 1) weekly_plan
     const { data: plan, error: planErr } = await supabase
       .from('weekly_plan')
-     .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,superset_group,superset_order,notes,completed,actual_sets,actual_reps,actual_weight,locked_at,is_optional,exercises(name)')
-
+     .select('id,user_id,week_start,day_of_week,exercise_id,target_sets,target_reps,target_weight,superset_group,superset_order,notes,completed,actual_sets,actual_reps,actual_weight,locked_at,is_optional,exercises(name,video_url,coaching_tips)')
 
       .eq('user_id', userId)
       .eq('week_start', weekStartStr)
@@ -129,19 +138,29 @@ export default function WeeklyPlanner() {
 
       <WeeklyNav onWeekChange={handleWeekChange} currentWeekStart={currentWeekStart} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(180px, 1fr))', gap: '0.75rem' }}>
-        {Array.from({ length: 7 }).map((_, day) => (
-          <WeeklyDayColumn
-            key={day}
-            dayOfWeek={day}
-            weekStart={weekStartStr}
-            dayTitle={metaByDay[day]?.day_title ?? ''}
-            dayNotes={metaByDay[day]?.day_notes ?? null}
-            items={itemsByDay[day] ?? []}
-            onSaved={refetch}
-          />
-        ))}
-      </div>
-    </div>
+     <div style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(7, minmax(360px, 1fr))',
+      gap: '0.75rem',
+      minWidth: '2520px', // 7 * 360
+      alignItems: 'start',
+    }}
+  >
+    {Array.from({ length: 7 }).map((_, day) => (
+      <WeeklyDayColumn
+        key={day}
+        dayOfWeek={day}
+        weekStart={weekStartStr}
+        dayTitle={metaByDay[day]?.day_title ?? ''}
+        dayNotes={metaByDay[day]?.day_notes ?? null}
+        items={itemsByDay[day] ?? []}
+        onSaved={refetch}
+      />
+    ))}
+  </div>
+</div>
+
   );
 }
