@@ -1,87 +1,101 @@
-import { format } from 'date-fns';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import type { PlanItem } from '../pages/WeeklyPlanner';
 
-interface ExerciseLog {
-  id?: number;
-  workout_date: string;
-  exercise_name: string;
-  set_number: number;
-  reps: number;
-  weight_lb: number;
-  rpe?: number;
-  pain?: boolean;
-  exercise_id: number;
-}
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function WeeklyDayColumn({
-  date,
-  exercises,
-  userId,
-  refreshWeek,
+  dayOfWeek,
+  weekStart,
+  items,
+  onSaved,
 }: {
-  date: Date;
-  exercises: ExerciseLog[];
-  userId: string | null;
-  refreshWeek: () => void;
+  dayOfWeek: number;
+  weekStart: string;
+  items: PlanItem[];
+  onSaved: () => void;
 }) {
-  const [logs, setLogs] = useState<ExerciseLog[]>(exercises);
+  const [local, setLocal] = useState<PlanItem[]>(items);
 
-  const handleChange = (index: number, field: 'reps' | 'weight_lb' | 'rpe' | 'pain', value: any) => {
-    const newLogs = [...logs];
-    newLogs[index] = { ...newLogs[index], [field]: value };
-    setLogs(newLogs);
+  useEffect(() => setLocal(items), [items]);
+
+  const updateField = (idx: number, field: keyof PlanItem, value: any) => {
+    const next = [...local];
+    (next[idx] as any)[field] = value;
+    setLocal(next);
   };
 
-  const saveLog = async (log: ExerciseLog) => {
-    if (!userId) return;
-    await supabase.from('workout_logs').upsert({
-      id: log.id,
-      user_id: userId,
-      workout_date: log.workout_date,
-      exercise_id: log.exercise_id,
-      set_number: log.set_number,
-      reps: log.reps,
-      weight_lb: log.weight_lb,
-      rpe: log.rpe,
-      pain: log.pain,
-    });
-    refreshWeek();
+  const saveRow = async (row: PlanItem) => {
+    const { error } = await supabase
+      .from('weekly_plan')
+      .update({
+        target_sets: row.target_sets,
+        target_reps: row.target_reps,
+        target_weight: row.target_weight,
+      })
+      .eq('id', row.id);
+
+    if (error) {
+      console.error('save weekly_plan error:', error);
+      return;
+    }
+    onSaved();
   };
 
   return (
-    <div style={{ flex: 1, border: '1px solid #ccc', padding: '0.5rem', borderRadius: '6px' }}>
-      <h3>{format(date, 'EEE dd/MM')}</h3>
-      {logs.map((log, idx) => (
-        <div key={idx} style={{ marginBottom: '0.5rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>
-          <strong>{log.exercise_name}</strong>
-          <div>
-            Reps:{' '}
-            <input
-              type="number"
-              value={log.reps}
-              onChange={(e) => handleChange(idx, 'reps', Number(e.target.value))}
-            />
-            Weight:{' '}
-            <input
-              type="number"
-              value={log.weight_lb}
-              onChange={(e) => handleChange(idx, 'weight_lb', Number(e.target.value))}
-            />
-            RPE:{' '}
-            <input
-              type="number"
-              value={log.rpe || ''}
-              onChange={(e) => handleChange(idx, 'rpe', Number(e.target.value))}
-            />
-            Pain:{' '}
-            <input
-              type="checkbox"
-              checked={log.pain || false}
-              onChange={(e) => handleChange(idx, 'pain', e.target.checked)}
-            />
-            <button onClick={() => saveLog(log)}>Save</button>
+    <div style={{ background: '#fff', padding: '0.75rem', borderRadius: 8, border: '1px solid #ddd' }}>
+      <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
+        {DAY_LABELS[dayOfWeek]}
+      </div>
+
+      {local.length === 0 && (
+        <div style={{ fontSize: 12, opacity: 0.7 }}>
+          No plan items for this day.
+        </div>
+      )}
+
+      {local.map((row, idx) => (
+        <div key={row.id} style={{ borderTop: '1px solid #eee', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+          <div style={{ fontWeight: 600 }}>{row.exercises?.name ?? `Exercise ${row.exercise_id}`}</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 6 }}>
+            <label style={{ fontSize: 12 }}>
+              Sets
+              <input
+                type="number"
+                value={row.target_sets}
+                onChange={(e) => updateField(idx, 'target_sets', Number(e.target.value))}
+                style={{ width: '100%' }}
+              />
+            </label>
+
+            <label style={{ fontSize: 12 }}>
+              Reps
+              <input
+                type="number"
+                value={row.target_reps}
+                onChange={(e) => updateField(idx, 'target_reps', Number(e.target.value))}
+                style={{ width: '100%' }}
+              />
+            </label>
+
+            <label style={{ fontSize: 12 }}>
+              Weight (lb)
+              <input
+                type="number"
+                value={row.target_weight ?? ''}
+                onChange={(e) => updateField(idx, 'target_weight', e.target.value === '' ? null : Number(e.target.value))}
+                style={{ width: '100%' }}
+              />
+            </label>
           </div>
+
+          <button
+            onClick={() => saveRow(row)}
+            style={{ marginTop: 8, width: '100%' }}
+          >
+            Save
+          </button>
         </div>
       ))}
     </div>
