@@ -3,6 +3,13 @@ import { supabase } from '../lib/supabase';
 import type { PlanItem } from '../pages/WeeklyPlanner';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const COLORS = {
+  supersetBg: '#d9f7d9',      // green
+  supersetBorder: '#2e7d32',  // darker green border
+  regularBg: '#eefbea',       // light green
+  optionalBg: '#eeeeee',      // gray
+  optionalBorder: '#bdbdbd',
+};
 
 function sortKey(a: PlanItem) {
   const g = a.superset_group ?? 9999;
@@ -41,13 +48,7 @@ export default function WeeklyDayColumn({
       else map.set(r.superset_group, [...(map.get(r.superset_group) ?? []), r]);
     });
 
-const COLORS = {
-  supersetBg: '#d9f7d9',      // green
-  supersetBorder: '#2e7d32',  // darker green border
-  regularBg: '#eefbea',       // light green
-  optionalBg: '#eeeeee',      // gray
-  optionalBorder: '#bdbdbd',
-};
+
 
 
     // superset groups in numeric order
