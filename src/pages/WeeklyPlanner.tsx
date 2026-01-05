@@ -141,6 +141,10 @@ export default function WeeklyPlanner() {
 
       <WeeklyNav onWeekChange={handleWeekChange} currentWeekStart={currentWeekStart} />
 
+<div style={{ fontSize: 12, opacity: 0.7 }}>
+  userId: {userId ?? '(not logged in)'} | week: {weekStartStr}
+</div>
+
       <div style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
         <div
           style={{
